@@ -1,5 +1,10 @@
 # npmctl
 
+[![CI](https://github.com/nnmduc/npmctl/actions/workflows/ci.yml/badge.svg)](https://github.com/nnmduc/npmctl/actions/workflows/ci.yml)
+[![Release](https://github.com/nnmduc/npmctl/actions/workflows/release.yml/badge.svg)](https://github.com/nnmduc/npmctl/actions/workflows/release.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/nnmduc/npmctl?color=blue)](https://github.com/nnmduc/npmctl/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A single-binary CLI for [Nginx Proxy Manager](https://nginxproxymanager.com), built so an
 AI coding agent can drive it without quietly breaking production.
 
@@ -28,13 +33,33 @@ So the design priority here is **safety over features**:
 
 ## Install
 
+### One-line installer (macOS & Linux)
+
+Detects OS/architecture, verifies SHA256 checksums, and installs the latest static binary:
+
+```bash
+# Direct from repository
+curl -fsSL https://raw.githubusercontent.com/nnmduc/npmctl/main/install.sh | bash
+
+# Or via GitHub Gist
+curl -fsSL https://gist.githubusercontent.com/nnmduc/3386999a2061cd444d874f8cf4223884/raw/install.sh | bash
+```
+
+Custom installation directory or specific version:
+```bash
+curl -fsSL https://raw.githubusercontent.com/nnmduc/npmctl/main/install.sh | INSTALL_DIR=~/.local/bin VERSION=v0.1.0 bash
+```
+
+### Go Install
+
 ```bash
 go install github.com/nnmduc/npmctl/cmd/npmctl@latest
 ```
 
-Or download a binary from [Releases](https://github.com/nnmduc/npmctl/releases). Builds
-are static (`CGO_ENABLED=0`) for macOS (arm64, amd64), Linux (amd64, arm64) and Windows
-(amd64).
+### Pre-built Binaries
+
+Download pre-compiled static binaries directly from [Releases](https://github.com/nnmduc/npmctl/releases/latest). Builds
+are static (`CGO_ENABLED=0`) with zero external runtime dependencies for macOS (arm64, amd64), Linux (amd64, arm64), and Windows (amd64).
 
 ## Quickstart
 
