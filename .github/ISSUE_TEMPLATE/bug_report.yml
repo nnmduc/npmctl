@@ -1,0 +1,55 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in npmctl
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+        Please make sure you are running the latest version of `npmctl` before reporting.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: What went wrong?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Run 'npmctl ...'
+        2. With arguments '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output & Logs
+      description: Please paste any relevant command line output or error messages (ensure sensitive tokens/passwords are redacted).
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: npmctl Version / Environment
+      description: Output of `npmctl --version`, OS, and Nginx Proxy Manager version.
+      placeholder: "npmctl v0.1.0, macOS Sonoma / Ubuntu 24.04, NPM v2.11.x"
+    validations:
+      required: true
