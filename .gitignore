@@ -1,0 +1,16 @@
+# Compiled output
+/npmctl
+/dist/
+
+# Certificate material never belongs in the repo. `cert download` returns a zip
+# containing privkey.pem, and these entries are the backstop for a wrong -o path.
+*.pem
+*.zip
+*.key
+
+# Local lab instance state
+/npm-lab/
+
+# Credentials and the undo journal live outside the repo, but guard against a
+# stray copy landing here.
+credentials.json

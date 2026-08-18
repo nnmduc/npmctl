@@ -1,0 +1,13 @@
+# Project-local override of the ClaudeKit ignore baseline.
+#
+# The shipped baseline blocks directory-name patterns so that large build output
+# directories cannot fill LLM context. The hook matches those words anywhere in a
+# Bash command, not just in paths, which blocks ordinary Go development here:
+#
+#   build  - `go build` is the standard compile command
+#   target - a common Go identifier (and this repo has no Rust/Java target/ dir)
+#
+# This project is Go and has neither a build/ nor a target/ directory, so allowing
+# both is safe here without weakening the baseline for JS/TS or Rust projects.
+!build
+!target
