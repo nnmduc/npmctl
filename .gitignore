@@ -14,3 +14,7 @@
 # Credentials and the undo journal live outside the repo, but guard against a
 # stray copy landing here.
 credentials.json
+
+# Local workspace and planning artifacts
+/.claude/
+/plans/
