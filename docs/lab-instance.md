@@ -1,17 +1,12 @@
-# Lab instance
+# Lab Instance
 
-A disposable Nginx Proxy Manager for exercising `npmctl` before it is pointed at
-anything you care about.
+A disposable Nginx Proxy Manager setup for testing `npmctl` before running it in production.
 
-Hermetic tests (`go test ./...`) need none of this. The lab exists because fixtures only
-prove the code agrees with itself: a fixture built from a wrong payload matches the wrong
-payload. Several behavioural contracts are invisible to the OpenAPI schema, so
-`npmctl schema check` cannot detect them changing — only a live instance can.
+Unit tests (`go test ./...`) do not require Docker. The lab instance helps verify real-world behaviors that cannot be fully captured in static test fixtures.
 
-## Start it
+## Start the Lab
 
-Pin the image to **2.15.1**. Never `latest`: every payload and behaviour npmctl relies on
-was verified against that specific version.
+Pin the image to version **2.15.1**:
 
 ```bash
 docker run -d --name npm-lab \
@@ -23,43 +18,34 @@ docker run -d --name npm-lab \
   jc21/nginx-proxy-manager:2.15.1
 ```
 
-`INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` are **required**. NPM 2.15.1 does not
-seed the old `admin@example.com` / `changeme` account — `backend/setup.js` creates the
-first user only when both variables are set. Without them the instance starts, answers
-`GET /api/` with `"setup": false`, and rejects every login.
+`INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` are **required**. NPM 2.15.1 creates the first user only when both environment variables are set. Without them, the instance starts in an unconfigured state and rejects logins.
 
-Wait for it to finish setting up:
+Wait for setup to complete:
 
 ```bash
 curl -s http://127.0.0.1:18181/api/
 # {"status":"OK","setup":true,"version":{"major":2,"minor":15,"revision":1}}
 ```
 
-`setup: true` means the admin account exists. Ports 18181/18080 avoid colliding with
-whatever already holds 8080 on a typical dev machine.
+`setup: true` confirms the admin account is ready.
 
-## Register it as a profile
+## Register as a Profile
 
-Keep the lab under its own profile and its own identity. A credential minted for the lab
-must never be usable against production, which is why npmctl keys credentials by
-`(profile, url, identity)`.
+Keep the lab under its own profile and identity. Credentials in npmctl are keyed by `(profile, url, identity)` so lab credentials will never be sent to production.
 
 ```bash
 npmctl -p lab --url http://127.0.0.1:18181 auth login --identity lab-admin@npmctl.test
 ```
 
-For an HTTPS lab with a self-signed certificate, prefer keeping verification on:
+For HTTPS setups with self-signed certificates:
 
 ```bash
 npmctl -p lab --url https://127.0.0.1:18181 --ca-cert ~/.config/npmctl/lab-ca.pem auth login ...
 ```
 
-`--insecure` also works but is refused for `auth login`, because sending a password over a
-connection you declined to verify is the exact case an interceptor wants.
+## Run Live Smoke Tests
 
-## Run the live smoke tests
-
-Skipped by default, so the hermetic guarantee is unaffected:
+Smoke tests are skipped by default during normal unit tests:
 
 ```bash
 NPMCTL_E2E_URL=http://127.0.0.1:18181 \
@@ -68,41 +54,29 @@ NPMCTL_E2E_SECRET='<throwaway password>' \
   go test ./internal/npmapi/ -run E2E -v
 ```
 
-They refuse to run against a non-loopback URL unless `NPMCTL_E2E_ALLOW_REMOTE=1` is set —
-they create and delete real objects.
+Tests only run against loopback addresses unless `NPMCTL_E2E_ALLOW_REMOTE=1` is explicitly set.
 
-## What the lab catches that fixtures cannot
+## Verified NPM Behaviors
 
-Each of these was found or confirmed by running against a live 2.15.1 instance, and each is
-now pinned by a test in `internal/npmapi/e2e_test.go`:
+The following NPM behaviors were verified against a live 2.15.1 instance and are tested in `internal/npmapi/e2e_test.go`:
 
-| Contract | Behaviour |
+| Item | Behavior |
 |---|---|
-| `expand` encoding | Must be **one** comma-separated parameter. Every route parses `typeof req.query.expand === "string" ? …split(",") : null`, so repeated `expand=a&expand=b` arrives as an array, fails the check, and is silently dropped — no error, just missing fields. |
-| Partial update | `PUT` genuinely leaves unmentioned fields alone. `minProperties: 1` says a one-field body is legal, not that the rest survives. |
-| TLS flag coercion | `internal/host.js` `cleanSslHstsData` forces flags off when prerequisites are missing: no `certificate_id` clears `ssl_forced` **and** `http2_support`; no `ssl_forced` clears `hsts_enabled`; no `hsts_enabled` clears `hsts_subdomains`. The write still returns 200, so npmctl compares request against response and warns. |
-| Access-list passwords | `GET` never returns them — every item comes back with `password: ""`. This is why `acl update` demands complete arrays and refuses an existing user with an empty password. |
-| Stream update fields | `POST /nginx/streams` accepts `domain_names`; `PUT /nginx/streams/{id}` does not, and both forbid unknown properties. |
-| Unknown properties | Rejected with HTTP 400, which is what makes the payload allowlist load-bearing rather than decorative. |
+| `expand` parameter | Must be a single comma-separated parameter. Passing repeated parameters causes NPM to ignore the field. |
+| Partial updates | `PUT` requests preserve unmentioned fields. |
+| TLS flag dependencies | Flags like `ssl_forced` and `http2_support` require a valid certificate. If missing, NPM resets them automatically. npmctl checks and warns if flags were reset. |
+| Access-list passwords | `GET` requests never return user passwords. Updates require submitting complete user lists. |
+| Stream fields | `POST /nginx/streams` accepts `domain_names`, while `PUT /nginx/streams/{id}` does not. Unknown fields are rejected with HTTP 400. |
 
-## Certificates in the lab
+## Certificates in the Lab
 
-Let's Encrypt cannot validate `localhost`, so real issuance needs either a public domain
-pointed at the lab or the LE **staging** directory. Staging has far looser rate limits,
-which also makes it the right place to exercise the attempt journal — `npmctl` refuses a
-4th issuance for the same domain set within 7 days, and you want to see that refusal
-somewhere harmless.
+Let's Encrypt cannot validate `localhost` domains. For testing certificates, use a public domain or the Let's Encrypt staging environment.
 
-`cert rm` on a `letsencrypt` certificate performs a real ACME **revocation**. Confirm you
-are on the lab profile before running it.
+Note that running `cert rm` on a Let's Encrypt certificate performs an ACME certificate revocation.
 
-## Tear it down
+## Tear Down
 
 ```bash
 docker rm -f npm-lab
 rm -rf npm-lab/
 ```
-
-The data directory holds the lab's SQLite database and any certificates it issued. It is
-not sensitive in the way production is, but it is not nothing either — remove it rather
-than leaving it around.
