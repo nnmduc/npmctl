@@ -43,7 +43,7 @@ archives:
     files:
       - README.md
       - LICENSE
-      - docs/**/*
+      - docs/*
 
 checksum:
   name_template: checksums.txt
@@ -71,12 +71,3 @@ release:
     the only real boundary.
 
     Deleting a Let's Encrypt certificate **revokes** it. That cannot be undone.
-
-brews:
-  - name: npmctl
-    repository:
-      owner: nnmduc
-      name: homebrew-tap
-    description: Write-gated CLI for Nginx Proxy Manager
-    license: MIT
-    skip_upload: auto
