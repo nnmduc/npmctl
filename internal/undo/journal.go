@@ -97,25 +97,37 @@ func (j *Journal) Append(e *Entry, now time.Time) (string, error) {
 		return "", err
 	}
 	stamp := now.UTC().Format("20060102T150405.000Z")
-	e.ID = fmt.Sprintf("%s-%s-%d", stamp, sanitize(e.Kind), e.TargetID)
+	baseID := fmt.Sprintf("%s-%s-%d", stamp, sanitize(e.Kind), e.TargetID)
 	e.Time = now.UTC().Format(time.RFC3339Nano)
-	path := filepath.Join(dir, e.ID+".json")
 
-	b, err := json.MarshalIndent(e, "", "  ")
-	if err != nil {
-		return "", err
+	for seq := 0; seq < 1000; seq++ {
+		id := baseID
+		if seq > 0 {
+			id = fmt.Sprintf("%s-%03d", baseID, seq)
+		}
+		e.ID = id
+		path := filepath.Join(dir, id+".json")
+
+		b, err := json.MarshalIndent(e, "", "  ")
+		if err != nil {
+			return "", err
+		}
+		// 0600 and O_EXCL: the entry is plaintext secret material and must never
+		// silently overwrite another.
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		if os.IsExist(err) {
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+		defer f.Close()
+		if _, err := f.Write(b); err != nil {
+			return "", err
+		}
+		return path, nil
 	}
-	// 0600 and O_EXCL: the entry is plaintext secret material and must never
-	// silently overwrite another.
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	if _, err := f.Write(b); err != nil {
-		return "", err
-	}
-	return path, nil
+	return "", fmt.Errorf("too many concurrent undo entries in the same millisecond for %s", baseID)
 }
 
 // List returns a profile's entries, newest first.
