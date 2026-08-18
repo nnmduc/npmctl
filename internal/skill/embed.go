@@ -1,5 +1,5 @@
-// Package skill installs the Agent Skill that lets Claude Code, Codex and similar
-// agents drive npmctl.
+// Package skill installs the Agent Skill that lets Claude Code, Antigravity (AGY),
+// Codex and similar AI agents drive npmctl safely.
 package skill
 
 import (

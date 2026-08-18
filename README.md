@@ -203,8 +203,15 @@ invalidates its stored credential rather than replaying it against a different h
 ## Use with AI agents
 
 ```bash
-npmctl skill install                     # writes ~/.claude/skills/nginx-proxy-manager/
-npmctl skill install --agents-md ./AGENTS.md
+# Auto-detects installed agents (Claude Code, Antigravity/AGY, Codex, OpenCode, Cursor, Gemini CLI)
+npmctl skill install
+
+# Target specific agent(s)
+npmctl skill install --agent agy,codex
+npmctl skill install --all
+
+# Install to project workspace (.agents/skills) and append pointer to AGENTS.md
+npmctl skill install --project --agents-md ./AGENTS.md
 ```
 
 The skill pre-approves **read commands and `--dry-run` only**. No write is pre-approved,

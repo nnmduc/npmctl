@@ -334,3 +334,123 @@ func TestSkillInstallDryRunWritesNothing(t *testing.T) {
 		t.Errorf("--dry-run created files: %v", entries)
 	}
 }
+
+// TestSkillInstallAutoDetectsMultipleAgents verifies that detected agents on the machine
+// (Antigravity CLI, Claude Code, Codex, etc.) all receive the skill.
+func TestSkillInstallAutoDetectsMultipleAgents(t *testing.T) {
+	h := newHarness(t)
+
+	// Simulate installed agents by creating their root configuration directories.
+	agyDir := filepath.Join(h.home, ".gemini", "antigravity-cli")
+	claudeDir := filepath.Join(h.home, ".claude")
+	codexDir := filepath.Join(h.home, ".codex")
+	for _, d := range []string{agyDir, claudeDir, codexDir} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	stdout, _, code := h.run("skill", "install")
+	if code != exitcode.OK {
+		t.Fatalf("install failed with %d: %s", code, stdout)
+	}
+
+	// Verify all detected agents have SKILL.md installed.
+	agySkill := filepath.Join(agyDir, "skills", skill.Name, "SKILL.md")
+	claudeSkill := filepath.Join(claudeDir, "skills", skill.Name, "SKILL.md")
+	codexSkill := filepath.Join(codexDir, "skills", skill.Name, "SKILL.md")
+	cursorSkill := filepath.Join(h.home, ".cursor", "skills", skill.Name, "SKILL.md")
+
+	for _, p := range []string{agySkill, claudeSkill, codexSkill} {
+		if _, err := os.Stat(p); err != nil {
+			t.Errorf("expected skill to be installed at %s, got error: %v", p, err)
+		}
+	}
+
+	// Cursor was not installed/detected, so it shouldn't have been created.
+	if _, err := os.Stat(cursorSkill); err == nil {
+		t.Errorf("cursor was not present; should not have installed to %s", cursorSkill)
+	}
+}
+
+// TestSkillInstallSpecificAgents verifies the --agent flag with aliases (e.g. agy, codex).
+func TestSkillInstallSpecificAgents(t *testing.T) {
+	h := newHarness(t)
+
+	stdout, _, code := h.run("skill", "install", "--agent", "agy,codex")
+	if code != exitcode.OK {
+		t.Fatalf("install with --agent failed with %d: %s", code, stdout)
+	}
+
+	agySkill := filepath.Join(h.home, ".gemini", "antigravity-cli", "skills", skill.Name, "SKILL.md")
+	codexSkill := filepath.Join(h.home, ".codex", "skills", skill.Name, "SKILL.md")
+	claudeSkill := filepath.Join(h.home, ".claude", "skills", skill.Name, "SKILL.md")
+
+	if _, err := os.Stat(agySkill); err != nil {
+		t.Errorf("expected AGY skill at %s: %v", agySkill, err)
+	}
+	if _, err := os.Stat(codexSkill); err != nil {
+		t.Errorf("expected Codex skill at %s: %v", codexSkill, err)
+	}
+	if _, err := os.Stat(claudeSkill); err == nil {
+		t.Errorf("claude was not requested; should not have installed to %s", claudeSkill)
+	}
+}
+
+// TestSkillInstallAllAgents verifies the --all flag installs to all supported agents.
+func TestSkillInstallAllAgents(t *testing.T) {
+	h := newHarness(t)
+
+	stdout, _, code := h.run("skill", "install", "--all")
+	if code != exitcode.OK {
+		t.Fatalf("install with --all failed with %d: %s", code, stdout)
+	}
+
+	for _, a := range supportedAgents {
+		skillPath := filepath.Join(a.GlobalDir(h.home), skill.Name, "SKILL.md")
+		if _, err := os.Stat(skillPath); err != nil {
+			t.Errorf("agent %s missing skill at %s: %v", a.ID, skillPath, err)
+		}
+	}
+}
+
+// TestSkillInstallProjectMode verifies the --project flag targets workspace directories.
+func TestSkillInstallProjectMode(t *testing.T) {
+	h := newHarness(t)
+
+	stdout, _, code := h.run("skill", "install", "--project", "--agent", "agy,claude")
+	if code != exitcode.OK {
+		t.Fatalf("install with --project failed with %d: %s", code, stdout)
+	}
+
+	// Project mode for AGY uses .agents/skills and Claude uses .claude/skills in CWD.
+	cwd, _ := os.Getwd()
+	agyProjectSkill := filepath.Join(cwd, ".agents", "skills", skill.Name, "SKILL.md")
+	claudeProjectSkill := filepath.Join(cwd, ".claude", "skills", skill.Name, "SKILL.md")
+
+	// Clean up after test
+	t.Cleanup(func() {
+		_ = os.RemoveAll(filepath.Join(cwd, ".agents"))
+		_ = os.RemoveAll(filepath.Join(cwd, ".claude"))
+	})
+
+	if _, err := os.Stat(agyProjectSkill); err != nil {
+		t.Errorf("expected project skill at %s: %v", agyProjectSkill, err)
+	}
+	if _, err := os.Stat(claudeProjectSkill); err != nil {
+		t.Errorf("expected project skill at %s: %v", claudeProjectSkill, err)
+	}
+}
+
+// TestSkillInstallUnknownAgent verifies proper error handling for invalid agent names.
+func TestSkillInstallUnknownAgent(t *testing.T) {
+	h := newHarness(t)
+
+	_, stderr, code := h.run("skill", "install", "--agent", "nonexistent-agent")
+	if code != exitcode.Usage {
+		t.Fatalf("want exit %d for unknown agent, got %d\n%s", exitcode.Usage, code, stderr)
+	}
+	if !strings.Contains(stderr, "unknown agent") || !strings.Contains(stderr, "antigravity-cli") {
+		t.Errorf("expected error message explaining unknown agent and listing supported agents, got:\n%s", stderr)
+	}
+}
