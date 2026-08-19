@@ -1,0 +1,9 @@
+{
+  "npmctl_version": "dev",
+  "checksums": {
+    "SKILL.md": "f46cb854357f5d3835c2581ae4115a85097cfc6dbab4337469d46118e286f4f0",
+    "references/command-reference.md": "ea3291b1180d55ad2f4355865a1afd71745735d8d228720b13de4ca04a6bb5b6",
+    "references/common-tasks.md": "b8165e26e33d52ecfbd2ab19104b9647bf3317dfa45e8942531efd98457c1897",
+    "references/troubleshooting.md": "5337f522539f0a811bd104b7a2c19546c21985473f1fd2aaf5720aaeb9fbc7f5"
+  }
+}

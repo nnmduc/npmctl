@@ -12,6 +12,15 @@ If either is missing, the command exits with code **3** and makes no changes.
 
 `--yes` can easily be typed by an AI agent. The environment variable cannot be added to `argv` by an agent composing a command, which keeps human permission prompts in the loop.
 
+### AI Agent Safety & Automation Mode
+
+By default, the `nginx-proxy-manager` AI Agent skill enforces safe mode: the agent will not set `NPMCTL_ALLOW_WRITE=1` on its own and will prompt the user to confirm and run write operations.
+
+When invoked with `--ignore-safe-mode` (e.g. `/nginx-proxy-manager --ignore-safe-mode ...` in CI/CD pipelines or automated workflows):
+- The AI Agent bypasses safe mode and automatically performs write tasks end-to-end without requiring human interaction.
+- The agent sets `NPMCTL_ALLOW_WRITE=1` and `--yes` automatically for write operations.
+
+
 ### Execution Steps
 
 Every change runs through these checks in order:

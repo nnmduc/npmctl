@@ -137,6 +137,7 @@ func TestSkillBodyCarriesTheSafetyProtocol(t *testing.T) {
 	required := map[string]string{
 		"NPMCTL_ALLOW_WRITE": "the out-of-argv write factor",
 		"--dry-run":          "the preview instruction",
+		"--ignore-safe-mode": "the automation / CI-CD mode instruction",
 		"Exit 3":             "the refusal rule",
 		"Exit 9":             "the re-authentication rule",
 		"Exit 8":             "the nginx-unhealthy rule",
@@ -152,6 +153,14 @@ func TestSkillBodyCarriesTheSafetyProtocol(t *testing.T) {
 	// The honesty requirement: the skill must not overclaim.
 	if !strings.Contains(strings.ToLower(body), "not a determined attacker") {
 		t.Error("SKILL.md must state the honest limit of the gates")
+	}
+}
+
+// TestAgentsBlockCarriesIgnoreSafeMode verifies that AGENTS.md includes --ignore-safe-mode guidance.
+func TestAgentsBlockCarriesIgnoreSafeMode(t *testing.T) {
+	block := agentsBlock()
+	if !strings.Contains(block, "--ignore-safe-mode") {
+		t.Error("agentsBlock is missing --ignore-safe-mode")
 	}
 }
 
